@@ -54,19 +54,30 @@ RUN echo "always_populate_raw_post_data=-1" > $PHP_INI_DIR/conf.d/always_populat
 
 VOLUME ["/composer"]
 
+# Allow Composer to be run as root
+ENV COMPOSER_ALLOW_SUPERUSER 1
+
 # Register the COMPOSER_HOME environment variable
 ENV COMPOSER_HOME /composer
 
 # Add global binary directory to PATH and make sure to re-export it
 ENV PATH /composer/vendor/bin:$PATH
 
-# Allow Composer to be run as root
-ENV COMPOSER_ALLOW_SUPERUSER 1
+# From https://github.com/composer/docker/blob/master/1.4/Dockerfile
+ENV COMPOSER_VERSION 1.4.2
 
-# Setup the Composer installer
-RUN curl -o /tmp/composer-setup.php https://getcomposer.org/installer \
-  && curl -o /tmp/composer-setup.sig https://composer.github.io/installer.sig \
-  && php -r "if (hash('SHA384', file_get_contents('/tmp/composer-setup.php')) !== trim(file_get_contents('/tmp/composer-setup.sig'))) { unlink('/tmp/composer-setup.php'); echo 'Invalid installer' . PHP_EOL; exit(1); }"
+RUN curl -s -f -L -o /tmp/installer.php https://raw.githubusercontent.com/composer/getcomposer.org/da290238de6d63faace0343efbdd5aa9354332c5/web/installer \
+ && php -r " \
+    \$signature = '669656bab3166a7aff8a7506b8cb2d1c292f042046c5a994c43155c0be6190fa0355160742ab2e1c88d40d5be660b410'; \
+    \$hash = hash('SHA384', file_get_contents('/tmp/installer.php')); \
+    if (!hash_equals(\$signature, \$hash)) { \
+        unlink('/tmp/installer.php'); \
+        echo 'Integrity check failed, installer is either corrupt or worse.' . PHP_EOL; \
+        exit(1); \
+    }" \
+ && php /tmp/installer.php --no-ansi --install-dir=/usr/bin --filename=composer --version=${COMPOSER_VERSION} \
+ && rm /tmp/installer.php \
+ && composer --ansi --version --no-interaction
 
 # Set up the volumes and working directory
 VOLUME ["/app"]
