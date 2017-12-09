@@ -28,9 +28,11 @@ RUN apk --update add --no-cache --virtual .xdebug-build-deps \
 RUN apk --update add \
         unzip \
         bash \
-    && rm -rf /var/cache/apk/*
+    && rm -rf /var/cache/apk/* \
+    && rm /usr/local/bin/wp
 
 COPY docker-entrypoint.sh /usr/local/bin/
+COPY wp-su.sh /usr/local/bin/wp
 
 USER www-data
 
